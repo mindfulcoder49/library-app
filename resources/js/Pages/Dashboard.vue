@@ -37,6 +37,17 @@ defineProps({
                         <Link :href="route('reports.index')" class="ss-btn-secondary">View Reports</Link>
                     </div>
                 </div>
+
+                <div class="ss-card">
+                    <p class="mb-2 text-lg font-semibold text-slate-900">Need Help?</p>
+                    <p class="mb-4 text-sm text-slate-600">
+                        Read step-by-step usage docs, CSV import guidance, and lender/borrower policy details.
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                        <Link :href="route('help.index')" class="ss-btn-primary">Open Help Center</Link>
+                        <Link :href="route('guidelines')" class="ss-btn-secondary">Read Guidelines</Link>
+                    </div>
+                </div>
             </div>
         </div>
     </AuthenticatedLayout>

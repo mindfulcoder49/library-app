@@ -7,7 +7,6 @@ const props = defineProps({
     languages: Array,
 });
 const page = usePage();
-const canBulkImport = page.props.auth.user?.is_administrator || page.props.auth.user?.is_site_owner;
 const importPreview = page.props.flash?.import_preview;
 
 const form = useForm({
@@ -64,7 +63,7 @@ const previewCsv = () => {
         </template>
 
         <div class="mx-auto max-w-4xl space-y-6 py-8 sm:px-6 lg:px-8">
-            <section v-if="canBulkImport" class="ss-card">
+            <section class="ss-card">
                 <h3 class="text-lg font-semibold text-slate-900">Bulk Upload via CSV</h3>
                 <p class="mt-2 text-sm text-slate-700">
                     Upload a CSV/TSV with columns:

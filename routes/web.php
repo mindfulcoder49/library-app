@@ -24,6 +24,9 @@ Route::get('/guidelines', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/help', function () {
+        return Inertia::render('Help/Index');
+    })->name('help.index');
 
     Route::get('/books/mine', [BookItemController::class, 'index'])->name('books.mine');
     Route::get('/books/create', [BookItemController::class, 'create'])->name('books.create');

@@ -93,6 +93,15 @@ const submit = () => {
                     <input v-model="form.agree_lender_guidelines" type="checkbox" class="rounded border-sky-300 text-sky-700 focus:ring-sky-500" />
                     <span>Agree to Lender Guidelines</span>
                 </label>
+                <div v-if="form.is_lender" class="rounded-xl border border-sky-200 bg-white p-3">
+                    <p class="text-sm font-semibold text-slate-900">Guidelines for Lenders</p>
+                    <ul class="mt-1 list-inside list-disc space-y-1 text-sm text-slate-700">
+                        <li>Willing to share the books offered</li>
+                        <li>Share only books that are in good shape</li>
+                        <li>Share books about Diversity, Inclusion &amp; Equity or written by Diverse &amp; Underrepresented Authors</li>
+                        <li>Contact the Borrower in a timely manner and exchange the book</li>
+                    </ul>
+                </div>
                 <InputError :message="form.errors.agree_lender_guidelines" />
 
                 <label class="flex items-center gap-2">
@@ -103,7 +112,18 @@ const submit = () => {
                     <input v-model="form.agree_borrower_guidelines" type="checkbox" class="rounded border-sky-300 text-sky-700 focus:ring-sky-500" />
                     <span>Agree to Borrower Guidelines</span>
                 </label>
+                <div v-if="form.is_borrower" class="rounded-xl border border-sky-200 bg-white p-3">
+                    <p class="text-sm font-semibold text-slate-900">Guidelines for Borrowers</p>
+                    <ul class="mt-1 list-inside list-disc space-y-1 text-sm text-slate-700">
+                        <li>Treat the books borrowed respectfully</li>
+                        <li>Agree with the Lender a time and place to exchange the book</li>
+                        <li>Return the book on time or request an extension</li>
+                    </ul>
+                </div>
                 <InputError :message="form.errors.agree_borrower_guidelines" />
+                <Link :href="route('guidelines')" class="inline-flex text-sm font-semibold text-sky-700 underline hover:text-sky-900">
+                    View full Guidelines page
+                </Link>
             </div>
 
             <div>

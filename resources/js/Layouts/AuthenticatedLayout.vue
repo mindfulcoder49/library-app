@@ -31,6 +31,7 @@ const flash = usePage().props.flash;
                             <NavLink :href="route('loans.borrowed')" :active="route().current('loans.borrowed')">Borrowed</NavLink>
                             <NavLink :href="route('loans.requests')" :active="route().current('loans.requests')">Requests</NavLink>
                             <NavLink :href="route('reports.index')" :active="route().current('reports.index')">Reports</NavLink>
+                            <NavLink :href="route('help.index')" :active="route().current('help.index')">Help</NavLink>
                             <NavLink :href="route('guidelines')" :active="route().current('guidelines')">Guidelines</NavLink>
                         </div>
                     </div>
@@ -98,6 +99,7 @@ const flash = usePage().props.flash;
                     <ResponsiveNavLink :href="route('loans.borrowed')" :active="route().current('loans.borrowed')">Borrowed</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('loans.requests')" :active="route().current('loans.requests')">Requests</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('reports.index')" :active="route().current('reports.index')">Reports</ResponsiveNavLink>
+                    <ResponsiveNavLink :href="route('help.index')" :active="route().current('help.index')">Help</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('guidelines')" :active="route().current('guidelines')">Guidelines</ResponsiveNavLink>
                 </div>
 
@@ -124,6 +126,16 @@ const flash = usePage().props.flash;
         <div v-if="flash.success" class="ss-page-shell mt-4">
             <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
                 {{ flash.success }}
+            </div>
+        </div>
+        <div v-if="flash.warning" class="ss-page-shell mt-4">
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+                {{ flash.warning }}
+            </div>
+        </div>
+        <div v-if="flash.error" class="ss-page-shell mt-4">
+            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-800">
+                {{ flash.error }}
             </div>
         </div>
 

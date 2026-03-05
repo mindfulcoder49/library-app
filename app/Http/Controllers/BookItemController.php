@@ -119,22 +119,25 @@ class BookItemController extends Controller
 
     public function importCsv(Request $request): RedirectResponse
     {
-        abort_unless($request->user()->is_administrator || $request->user()->is_site_owner, 403);
-
         $validated = $request->validate([
             'csv_file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
             'dry_run' => ['nullable', 'boolean'],
         ]);
 
         $isDryRun = (bool) ($validated['dry_run'] ?? false);
-        $rows = $this->readDelimitedFile($validated['csv_file']);
+        try {
+            $rows = $this->readDelimitedFile($validated['csv_file']);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'CSV could not be read. Please verify file encoding and delimiter format.');
+        }
 
         if ($rows === []) {
-            return back()->with('success', 'No rows found in the uploaded file.');
+            return back()->with('warning', 'No rows found in the uploaded file.');
         }
 
         $imported = 0;
         $failed = 0;
+        $processedRows = 0;
         $errors = [];
         $previewRows = [];
 
@@ -142,6 +145,7 @@ class BookItemController extends Controller
             if (! $this->hasImportableData($row)) {
                 continue;
             }
+            $processedRows++;
 
             try {
                 DB::transaction(function () use ($row, $request, $isDryRun): void {
@@ -182,12 +186,24 @@ class BookItemController extends Controller
             }
         }
 
+        if ($processedRows === 0) {
+            $message = 'No importable rows were detected. Make sure the template columns are present (Title or ISBN is required).';
+        }
+
+        $flashType = 'success';
+        if ($processedRows === 0 || ($imported === 0 && $failed > 0)) {
+            $flashType = 'error';
+        } elseif ($failed > 0) {
+            $flashType = 'warning';
+        }
+
         return back()
-            ->with('success', $message)
+            ->with($flashType, $message)
             ->with('import_preview', [
                 'is_dry_run' => $isDryRun,
                 'imported' => $imported,
                 'failed' => $failed,
+                'processed_rows' => $processedRows,
                 'errors' => array_slice($errors, 0, 10),
                 'sample_rows' => $previewRows,
             ]);
@@ -195,8 +211,6 @@ class BookItemController extends Controller
 
     public function downloadImportTemplate(): HttpResponse
     {
-        abort_unless(auth()->user()?->is_administrator || auth()->user()?->is_site_owner, 403);
-
         $headers = [
             'ISBN-Emp',
             'ISBN',
