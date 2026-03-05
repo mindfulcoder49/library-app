@@ -27,7 +27,7 @@ class CatalogController extends Controller
         ]);
 
         $query = BookItem::query()
-            ->when(($filters['availability'] ?? 'available') === 'available', function (Builder $query) {
+            ->when(($filters['availability'] ?? 'all') === 'available', function (Builder $query) {
                 $query->where('status', 'available');
             })
             ->when($filters['category_id'] ?? null, function (Builder $query, int $categoryId) {
@@ -144,7 +144,7 @@ class CatalogController extends Controller
                 'office_location_id' => $filters['office_location_id'] ?? '',
                 'language_id' => $filters['language_id'] ?? '',
                 'book_type' => $filters['book_type'] ?? '',
-                'availability' => $filters['availability'] ?? 'available',
+                'availability' => $filters['availability'] ?? 'all',
             ],
             'items' => $items,
             'categories' => Category::query()->orderBy('name')->get(['id', 'name']),

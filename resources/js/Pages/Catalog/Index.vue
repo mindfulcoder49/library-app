@@ -20,7 +20,7 @@ const form = useForm({
     office_location_id: props.filters.office_location_id ?? '',
     language_id: props.filters.language_id ?? '',
     book_type: props.filters.book_type ?? '',
-    availability: props.filters.availability ?? 'available',
+    availability: props.filters.availability ?? 'all',
 });
 const actionForm = useForm({});
 
@@ -43,6 +43,18 @@ const clearFacets = () => {
 
 const requestLoan = (itemId) => {
     form.post(route('loans.store', itemId), { preserveScroll: true });
+};
+
+const canRequestOrWaitlist = (item) => {
+    if (!user) return false;
+
+    if (item.lender.id === user.id) return false;
+
+    return ['available', 'loan_pending', 'checked_out'].includes(item.status);
+};
+
+const requestButtonLabel = (item) => {
+    return item.status === 'available' ? 'Request Book' : 'Join Waitlist';
 };
 
 const removeItem = (itemId) => {
@@ -96,8 +108,8 @@ const isAdminUser = () => {
                 <input v-model="form.title" class="ss-input" placeholder="Title" />
                 <input v-model="form.author" class="ss-input" placeholder="Author" />
                 <select v-model="form.availability" class="ss-select">
-                    <option value="available">Available</option>
                     <option value="all">All Books</option>
+                    <option value="available">Available</option>
                 </select>
                 <select v-model="form.book_type" class="ss-select">
                     <option value="">All Types</option>
@@ -235,11 +247,11 @@ const isAdminUser = () => {
                                 Remove Book
                             </button>
                             <button
-                                v-if="user && item.status === 'available' && item.lender.id !== user.id"
+                                v-if="canRequestOrWaitlist(item)"
                                 @click="requestLoan(item.id)"
                                 class="ss-btn-primary mt-3"
                             >
-                                Request Book
+                                {{ requestButtonLabel(item) }}
                             </button>
                         </div>
                     </div>

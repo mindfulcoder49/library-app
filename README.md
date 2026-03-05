@@ -87,7 +87,12 @@ If these are upgraded, production builds may fail on hosts that do not run moder
 - Lender can approve/reject requests.
 - Lender can mark handoff/shared.
 - Borrower or lender can mark returned/cancelled.
-- Waiting list entries are created when requesting unavailable books.
+- Waiting list is fully supported for unavailable books:
+  - user joins queue with position
+  - duplicate queue entries are prevented
+  - users/admin can cancel waitlist entries
+  - queue positions rebalance automatically
+  - next waitlisted user is marked `notified` when a copy becomes available
 
 ### Admin Operational Controls
 
@@ -96,8 +101,13 @@ Admins and site owners can:
 - Edit any book item.
 - Remove any book item.
 - Move any item back to `pending_verification`.
-- View all active requests across the system.
-- View all active current loans across the system.
+- View full loan/request history across the system.
+- Filter system-wide loan views by:
+  - status
+  - lender
+  - borrower
+  - requested date range
+  - free-text search (title/ISBN/participant)
 
 ## Role and Permission Model
 
@@ -116,7 +126,8 @@ Admins and site owners can:
 - Can verify queue items (single and bulk).
 - Can edit/remove any book item.
 - Can move any book item to pending verification.
-- Can view global loan requests and global current loans.
+- Can view global loan and request history.
+- Can use admin filter bars on Requests/Borrowed pages.
 
 ## Guidelines (Business Rules)
 
@@ -181,6 +192,13 @@ Typical transitions:
 - `cancelled`
 - `rejected`
 
+### Waiting list statuses
+
+- `waiting`
+- `notified`
+- `fulfilled`
+- `cancelled`
+
 ## CSV Import Specification
 
 Import path: `Books -> Add New Book -> Bulk Upload via CSV`
@@ -238,6 +256,8 @@ Authenticated:
 - `PATCH /books/{bookItem}/reshelve`
 - `GET /loans/borrowed`
 - `GET /loans/requests`
+- `GET /loans/waitlist`
+- `PATCH /waitlist/{entry}/cancel`
 - `POST /catalog/{bookItem}/request`
 - `PATCH /loans/{loan}/approve`
 - `PATCH /loans/{loan}/reject`
