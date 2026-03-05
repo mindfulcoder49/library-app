@@ -22,6 +22,7 @@ const form = useForm({
     book_type: props.filters.book_type ?? '',
     availability: props.filters.availability ?? 'available',
 });
+const actionForm = useForm({});
 
 const search = () => {
     form.get(route('catalog.index'), { preserveState: true, replace: true, preserveScroll: true });
@@ -44,6 +45,14 @@ const requestLoan = (itemId) => {
     form.post(route('loans.store', itemId), { preserveScroll: true });
 };
 
+const removeItem = (itemId) => {
+    actionForm.patch(route('books.remove', itemId), { preserveScroll: true });
+};
+
+const moveToPending = (itemId) => {
+    actionForm.patch(route('books.mark-pending', itemId), { preserveScroll: true });
+};
+
 const bookTypeLabel = (value) => {
     if (value === 'hard_copy') return 'Hard Copy';
     if (value === 'online') return 'Online';
@@ -58,6 +67,18 @@ const amazonLink = (book) => {
     }
 
     return `https://www.amazon.com/s?k=${encodeURIComponent(isbn)}`;
+};
+
+const canEditItem = (item) => {
+    if (!user) return false;
+
+    return item.lender.id === user.id || user.is_administrator || user.is_site_owner;
+};
+
+const isAdminUser = () => {
+    if (!user) return false;
+
+    return user.is_administrator || user.is_site_owner;
 };
 </script>
 
@@ -190,6 +211,29 @@ const amazonLink = (book) => {
                             >
                                 View on Amazon
                             </a>
+                            <Link
+                                v-if="canEditItem(item)"
+                                :href="route('books.edit', item.id)"
+                                class="ss-btn-secondary mt-2"
+                            >
+                                Edit Book
+                            </Link>
+                            <button
+                                v-if="isAdminUser() && item.status !== 'pending_verification'"
+                                class="ss-btn-secondary mt-2"
+                                :disabled="actionForm.processing"
+                                @click="moveToPending(item.id)"
+                            >
+                                Move to Pending
+                            </button>
+                            <button
+                                v-if="isAdminUser() && item.status !== 'removed'"
+                                class="ss-btn-danger mt-2"
+                                :disabled="actionForm.processing"
+                                @click="removeItem(item.id)"
+                            >
+                                Remove Book
+                            </button>
                             <button
                                 v-if="user && item.status === 'available' && item.lender.id !== user.id"
                                 @click="requestLoan(item.id)"

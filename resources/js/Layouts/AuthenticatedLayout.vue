@@ -29,7 +29,7 @@ const canModerate = user?.is_administrator || user?.is_site_owner;
                         <div class="hidden space-x-5 sm:-my-px sm:ms-8 sm:flex">
                             <NavLink :href="route('dashboard')" :active="route().current('dashboard')">Dashboard</NavLink>
                             <NavLink :href="route('catalog.index')" :active="route().current('catalog.index')">Browse</NavLink>
-                            <NavLink :href="route('books.mine')" :active="route().current('books.mine') || route().current('books.create')">My Books</NavLink>
+                            <NavLink :href="route('books.mine')" :active="route().current('books.mine') || route().current('books.create') || route().current('books.edit')">My Books</NavLink>
                             <NavLink v-if="canModerate" :href="route('books.pending-verification')" :active="route().current('books.pending-verification')">Verify Queue</NavLink>
                             <NavLink :href="route('loans.borrowed')" :active="route().current('loans.borrowed')">Borrowed</NavLink>
                             <NavLink :href="route('loans.requests')" :active="route().current('loans.requests')">Requests</NavLink>
@@ -98,7 +98,7 @@ const canModerate = user?.is_administrator || user?.is_site_owner;
                 <div class="space-y-1 pb-3 pt-2">
                     <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">Dashboard</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('catalog.index')" :active="route().current('catalog.index')">Browse</ResponsiveNavLink>
-                    <ResponsiveNavLink :href="route('books.mine')" :active="route().current('books.mine') || route().current('books.create')">My Books</ResponsiveNavLink>
+                    <ResponsiveNavLink :href="route('books.mine')" :active="route().current('books.mine') || route().current('books.create') || route().current('books.edit')">My Books</ResponsiveNavLink>
                     <ResponsiveNavLink v-if="canModerate" :href="route('books.pending-verification')" :active="route().current('books.pending-verification')">Verify Queue</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('loans.borrowed')" :active="route().current('loans.borrowed')">Borrowed</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('loans.requests')" :active="route().current('loans.requests')">Requests</ResponsiveNavLink>

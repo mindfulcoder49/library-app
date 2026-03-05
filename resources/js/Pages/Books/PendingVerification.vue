@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
     items: Array,
@@ -10,6 +10,7 @@ const props = defineProps({
 const form = useForm({
     book_item_ids: [],
 });
+const actionForm = useForm({});
 
 const selectedIds = ref([]);
 
@@ -46,8 +47,26 @@ const verifySelected = () => {
     });
 };
 
+const bookTypeLabel = (value) => {
+    if (value === 'hard_copy') return 'Hard Copy';
+    if (value === 'online') return 'Online';
+
+    return value || 'N/A';
+};
+
+const amazonLink = (book) => {
+    const isbn = book?.isbn13 || book?.isbn10;
+    if (!isbn) return null;
+
+    return `https://www.amazon.com/s?k=${encodeURIComponent(isbn)}`;
+};
+
 const verify = (id) => {
     form.patch(route('books.verify', id), { preserveScroll: true });
+};
+
+const removeItem = (id) => {
+    actionForm.patch(route('books.remove', id), { preserveScroll: true });
 };
 </script>
 
@@ -88,6 +107,8 @@ const verify = (id) => {
                             <h3 class="text-lg font-semibold text-slate-900">{{ item.book.title }}</h3>
                             <p class="text-sm text-slate-600">Author(s): {{ item.book.authors.join(', ') || 'Unknown' }}</p>
                             <p class="text-sm text-slate-600">Category: {{ item.book.category || 'Uncategorized' }}</p>
+                            <p class="text-sm text-slate-600">Language: {{ item.book.language || 'Unknown' }}</p>
+                            <p class="text-sm text-slate-600">Type: {{ bookTypeLabel(item.book.book_type) }}</p>
                             <p class="text-sm text-slate-600">ISBN: {{ item.book.isbn13 || item.book.isbn10 || 'N/A' }}</p>
                         </div>
                     </div>
@@ -105,9 +126,26 @@ const verify = (id) => {
                     <span class="font-semibold text-slate-900">Lender Comments:</span> {{ item.lender_comments }}
                 </p>
 
-                <div class="mt-4">
+                <p v-if="item.book.description" class="mt-2 text-sm text-slate-700">{{ item.book.description }}</p>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <Link :href="route('books.edit', item.id)" class="ss-btn-secondary">
+                        Edit Book
+                    </Link>
+                    <a
+                        v-if="amazonLink(item.book)"
+                        :href="amazonLink(item.book)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="ss-btn-secondary"
+                    >
+                        View on Amazon
+                    </a>
                     <button class="ss-btn-secondary" :disabled="form.processing" @click="verify(item.id)">
                         Verify and Publish
+                    </button>
+                    <button class="ss-btn-danger" :disabled="actionForm.processing" @click="removeItem(item.id)">
+                        Remove Book
                     </button>
                 </div>
             </div>

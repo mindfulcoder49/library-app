@@ -58,12 +58,44 @@ class BookItemController extends Controller
         ]);
     }
 
+    public function edit(Request $request, BookItem $bookItem): Response
+    {
+        $this->authorizeBookItemEdit($request->user(), $bookItem);
+
+        $bookItem->load(['book.authors', 'book.category', 'book.language']);
+
+        return Inertia::render('Books/Edit', [
+            'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
+            'languages' => Language::query()->orderBy('name')->get(['id', 'name']),
+            'item' => [
+                'id' => $bookItem->id,
+                'status' => $bookItem->status,
+                'unique_key' => $bookItem->unique_key,
+                'expected_return_date' => $bookItem->expected_return_date?->toDateString(),
+                'lender_comments' => $bookItem->lender_comments,
+                'book' => [
+                    'title' => $bookItem->book->title,
+                    'isbn10' => $bookItem->book->isbn10,
+                    'isbn13' => $bookItem->book->isbn13,
+                    'description' => $bookItem->book->description,
+                    'book_type' => $bookItem->book->book_type,
+                    'category_id' => $bookItem->book->category_id,
+                    'language_id' => $bookItem->book->language_id,
+                    'authors' => $bookItem->book->authors
+                        ->map(fn ($author) => ['first_name' => $author->first_name, 'last_name' => $author->last_name])
+                        ->values()
+                        ->all(),
+                ],
+            ],
+        ]);
+    }
+
     public function pendingVerification(Request $request): Response
     {
         abort_unless($request->user()->is_administrator || $request->user()->is_site_owner, 403);
 
         $items = BookItem::query()
-            ->with(['book.authors', 'book.category', 'lender.officeLocation'])
+            ->with(['book.authors', 'book.category', 'book.language', 'lender.officeLocation'])
             ->where('status', 'pending_verification')
             ->latest()
             ->get()
@@ -76,6 +108,8 @@ class BookItemController extends Controller
                     'isbn10' => $item->book->isbn10,
                     'isbn13' => $item->book->isbn13,
                     'description' => $item->book->description,
+                    'book_type' => $item->book->book_type,
+                    'language' => optional($item->book->language)->name,
                     'category' => optional($item->book->category)->name,
                     'authors' => $item->book->authors->map(fn ($author) => $author->display_name)->values(),
                 ],
@@ -149,6 +183,58 @@ class BookItemController extends Controller
         });
 
         return redirect()->route('books.mine')->with('success', 'Book submitted for librarian verification.');
+    }
+
+    public function update(Request $request, BookItem $bookItem): RedirectResponse
+    {
+        $this->authorizeBookItemEdit($request->user(), $bookItem);
+
+        $validated = $request->validate([
+            'isbn10' => ['nullable', 'string', 'size:10'],
+            'isbn13' => ['nullable', 'string', 'size:13'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'book_type' => ['required', 'in:hard_copy,online'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'language_id' => ['nullable', 'integer', 'exists:languages,id'],
+            'lender_comments' => ['nullable', 'string'],
+            'expected_return_date' => ['nullable', 'date'],
+            'authors' => ['required', 'array', 'min:1'],
+            'authors.*.first_name' => ['nullable', 'string', 'max:120'],
+            'authors.*.last_name' => ['required', 'string', 'max:120'],
+        ]);
+
+        DB::transaction(function () use ($validated, $bookItem): void {
+            $bookItem->book()->update([
+                'isbn10' => $validated['isbn10'] ?? null,
+                'isbn13' => $validated['isbn13'] ?? null,
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'book_type' => $validated['book_type'],
+                'category_id' => $validated['category_id'] ?? null,
+                'language_id' => $validated['language_id'] ?? null,
+            ]);
+
+            $authorIds = collect($validated['authors'])
+                ->map(function (array $authorData): int {
+                    return Author::query()->firstOrCreate([
+                        'first_name' => $authorData['first_name'] ?? null,
+                        'last_name' => $authorData['last_name'],
+                    ])->id;
+                })
+                ->unique()
+                ->values()
+                ->all();
+
+            $bookItem->book->authors()->sync($authorIds);
+
+            $bookItem->update([
+                'lender_comments' => $validated['lender_comments'] ?? null,
+                'expected_return_date' => $validated['expected_return_date'] ?? null,
+            ]);
+        });
+
+        return redirect()->route('books.mine')->with('success', 'Book updated successfully.');
     }
 
     public function importCsv(Request $request): RedirectResponse
@@ -335,19 +421,40 @@ class BookItemController extends Controller
 
     public function remove(BookItem $bookItem): RedirectResponse
     {
-        abort_unless($bookItem->lender_id === auth()->id(), 403);
+        $user = auth()->user();
+        abort_unless(
+            $bookItem->lender_id === $user->id || $user->is_administrator || $user->is_site_owner,
+            403
+        );
 
         $bookItem->update([
             'status' => 'removed',
             'removed_at' => now(),
         ]);
 
-        return back()->with('success', 'Book removed from your shelf.');
+        return back()->with('success', 'Book removed.');
+    }
+
+    public function markPending(BookItem $bookItem): RedirectResponse
+    {
+        abort_unless(auth()->user()->is_administrator || auth()->user()->is_site_owner, 403);
+
+        $bookItem->update([
+            'status' => 'pending_verification',
+            'verified_at' => null,
+            'removed_at' => null,
+        ]);
+
+        return back()->with('success', 'Book moved to pending verification.');
     }
 
     public function reshelve(BookItem $bookItem): RedirectResponse
     {
-        abort_unless($bookItem->lender_id === auth()->id(), 403);
+        $user = auth()->user();
+        abort_unless(
+            $bookItem->lender_id === $user->id || $user->is_administrator || $user->is_site_owner,
+            403
+        );
 
         $bookItem->update([
             'status' => 'available',
@@ -355,6 +462,14 @@ class BookItemController extends Controller
         ]);
 
         return back()->with('success', 'Book reshelved and available.');
+    }
+
+    private function authorizeBookItemEdit(User $user, BookItem $bookItem): void
+    {
+        abort_unless(
+            $bookItem->lender_id === $user->id || $user->is_administrator || $user->is_site_owner,
+            403
+        );
     }
 
     private function hasImportableData(array $row): bool

@@ -35,6 +35,7 @@ const doAction = (routeName, id) => {
                     <p class="text-sm text-slate-600">Category: {{ item.book.category || 'Uncategorized' }}</p>
                     <p class="mt-2"><span class="ss-pill">{{ item.status }}</span></p>
                     <div class="mt-3 flex flex-wrap gap-2">
+                        <Link :href="route('books.edit', item.id)" class="ss-btn-secondary">Edit</Link>
                         <button v-if="item.status === 'removed'" @click="doAction('books.reshelve', item.id)" class="ss-btn-secondary">Reshelve</button>
                         <button v-if="item.status !== 'removed'" @click="doAction('books.remove', item.id)" class="ss-btn-danger">Remove</button>
                         <button v-if="item.status === 'pending_verification' && canModerate" @click="doAction('books.verify', item.id)" class="ss-btn-secondary">Verify</button>
