@@ -33,6 +33,7 @@ const canModerate = user?.is_administrator || user?.is_site_owner;
                             <NavLink v-if="canModerate" :href="route('books.pending-verification')" :active="route().current('books.pending-verification')">Verify Queue</NavLink>
                             <NavLink :href="route('loans.borrowed')" :active="route().current('loans.borrowed')">Borrowed</NavLink>
                             <NavLink :href="route('loans.requests')" :active="route().current('loans.requests')">Requests</NavLink>
+                            <NavLink :href="route('waitlist.index')" :active="route().current('waitlist.index')">Waitlist</NavLink>
                             <NavLink :href="route('reports.index')" :active="route().current('reports.index')">Reports</NavLink>
                             <NavLink :href="route('help.index')" :active="route().current('help.index')">Help</NavLink>
                             <NavLink :href="route('guidelines')" :active="route().current('guidelines')">Guidelines</NavLink>
@@ -102,6 +103,7 @@ const canModerate = user?.is_administrator || user?.is_site_owner;
                     <ResponsiveNavLink v-if="canModerate" :href="route('books.pending-verification')" :active="route().current('books.pending-verification')">Verify Queue</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('loans.borrowed')" :active="route().current('loans.borrowed')">Borrowed</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('loans.requests')" :active="route().current('loans.requests')">Requests</ResponsiveNavLink>
+                    <ResponsiveNavLink :href="route('waitlist.index')" :active="route().current('waitlist.index')">Waitlist</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('reports.index')" :active="route().current('reports.index')">Reports</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('help.index')" :active="route().current('help.index')">Help</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('guidelines')" :active="route().current('guidelines')">Guidelines</ResponsiveNavLink>

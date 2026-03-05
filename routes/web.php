@@ -44,6 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/loans/borrowed', [LoanController::class, 'borrowed'])->name('loans.borrowed');
     Route::get('/loans/requests', [LoanController::class, 'requests'])->name('loans.requests');
+    Route::get('/loans/waitlist', [LoanController::class, 'waitlist'])->name('waitlist.index');
+    Route::patch('/waitlist/{entry}/cancel', [LoanController::class, 'leaveWaitlist'])->name('waitlist.cancel');
     Route::post('/catalog/{bookItem}/request', [LoanController::class, 'store'])->name('loans.store');
     Route::patch('/loans/{loan}/approve', [LoanController::class, 'approve'])->name('loans.approve');
     Route::patch('/loans/{loan}/reject', [LoanController::class, 'reject'])->name('loans.reject');

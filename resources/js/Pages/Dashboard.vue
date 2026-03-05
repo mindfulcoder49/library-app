@@ -34,6 +34,7 @@ defineProps({
                         <Link :href="route('books.create')" class="ss-btn-primary">Add New Book</Link>
                         <Link :href="route('books.mine')" class="ss-btn-secondary">View My Books</Link>
                         <Link :href="route('loans.borrowed')" class="ss-btn-secondary">View Borrowed</Link>
+                        <Link :href="route('waitlist.index')" class="ss-btn-secondary">View Waitlist</Link>
                         <Link :href="route('reports.index')" class="ss-btn-secondary">View Reports</Link>
                     </div>
                 </div>

@@ -15,6 +15,7 @@
 /node_modules
 /public/build
 /public/hot
+/docs/Check-It-Out_Implementation-Brief_for-John-Ketner.md
 /public/storage
 /storage/*.key
 /storage/pail

@@ -4,6 +4,14 @@ import { Head, useForm, usePage } from '@inertiajs/vue3';
 
 const props = defineProps({
     loans: Array,
+    filters: {
+        type: Object,
+        default: () => ({}),
+    },
+    people: {
+        type: Array,
+        default: () => [],
+    },
     isGlobalView: {
         type: Boolean,
         default: false,
@@ -11,16 +19,38 @@ const props = defineProps({
 });
 
 const user = usePage().props.auth.user;
-const form = useForm({});
+const actionForm = useForm({});
+const filterForm = useForm({
+    q: props.filters.q ?? '',
+    status: props.filters.status ?? '',
+    lender_id: props.filters.lender_id ?? '',
+    borrower_id: props.filters.borrower_id ?? '',
+    date_from: props.filters.date_from ?? '',
+    date_to: props.filters.date_to ?? '',
+});
 
 const canManageLoan = (loan) => loan.borrower_id === user.id || loan.lender_id === user.id;
 
+const applyFilters = () => {
+    filterForm.get(route('loans.borrowed'), { preserveState: true, preserveScroll: true, replace: true });
+};
+
+const clearFilters = () => {
+    filterForm.q = '';
+    filterForm.status = '';
+    filterForm.lender_id = '';
+    filterForm.borrower_id = '';
+    filterForm.date_from = '';
+    filterForm.date_to = '';
+    applyFilters();
+};
+
 const returnBook = (loanId) => {
-    form.patch(route('loans.return', loanId), { preserveScroll: true });
+    actionForm.patch(route('loans.return', loanId), { preserveScroll: true });
 };
 
 const cancel = (loanId) => {
-    form.patch(route('loans.cancel', loanId), { preserveScroll: true });
+    actionForm.patch(route('loans.cancel', loanId), { preserveScroll: true });
 };
 </script>
 
@@ -29,12 +59,45 @@ const cancel = (loanId) => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="ss-title">{{ isGlobalView ? 'Current Loans (System-wide)' : 'View Books Borrowed' }}</h2>
+            <h2 class="ss-title">{{ isGlobalView ? 'Loans and History (System-wide)' : 'View Books Borrowed' }}</h2>
         </template>
 
         <div class="ss-page-shell space-y-4 py-8">
+            <form v-if="isGlobalView" @submit.prevent="applyFilters" class="ss-card grid grid-cols-1 gap-3 md:grid-cols-4">
+                <input v-model="filterForm.q" class="ss-input md:col-span-2" placeholder="Search title, ISBN, lender, borrower" />
+                <select v-model="filterForm.status" class="ss-select">
+                    <option value="">All statuses</option>
+                    <option value="requested">Requested</option>
+                    <option value="approved">Approved</option>
+                    <option value="shared">Shared</option>
+                    <option value="borrowed">Borrowed</option>
+                    <option value="returned">Returned</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <div class="flex gap-2">
+                    <button class="ss-btn-primary flex-1">Apply</button>
+                    <button type="button" class="ss-btn-secondary flex-1" @click="clearFilters">Clear</button>
+                </div>
+
+                <select v-model="filterForm.lender_id" class="ss-select">
+                    <option value="">All lenders</option>
+                    <option v-for="person in people" :key="`lender-${person.id}`" :value="person.id">
+                        {{ person.name }} ({{ person.employee_id || 'N/A' }})
+                    </option>
+                </select>
+                <select v-model="filterForm.borrower_id" class="ss-select">
+                    <option value="">All borrowers</option>
+                    <option v-for="person in people" :key="`borrower-${person.id}`" :value="person.id">
+                        {{ person.name }} ({{ person.employee_id || 'N/A' }})
+                    </option>
+                </select>
+                <input v-model="filterForm.date_from" type="date" class="ss-input" />
+                <input v-model="filterForm.date_to" type="date" class="ss-input" />
+            </form>
+
             <div v-if="loans.length === 0" class="ss-card">
-                <p class="text-sm text-slate-700">{{ isGlobalView ? 'No current loans found in the system.' : 'You do not have any loans in this view.' }}</p>
+                <p class="text-sm text-slate-700">{{ isGlobalView ? 'No loan records found in the system.' : 'You do not have any loans in this view.' }}</p>
             </div>
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
