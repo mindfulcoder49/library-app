@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-slate-50 text-slate-800 antialiased;
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(14, 165, 233, 0.08), transparent 28%),
+            radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.09), transparent 24%);
+        background-attachment: fixed;
+    }
+}
+
+@layer components {
+    .ss-page-shell {
+        @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+    }
+
+    .ss-card {
+        @apply rounded-2xl border border-sky-100 bg-white p-5 shadow-[0_14px_34px_rgba(2,6,23,0.06)];
+    }
+
+    .ss-card-soft {
+        @apply rounded-2xl border border-sky-100/70 bg-sky-50/70 p-4;
+    }
+
+    .ss-title {
+        @apply text-xl font-semibold text-slate-900;
+    }
+
+    .ss-subtitle {
+        @apply text-sm text-slate-600;
+    }
+
+    .ss-input {
+        @apply rounded-xl border-sky-200 text-slate-800 shadow-sm focus:border-sky-500 focus:ring-sky-500;
+    }
+
+    .ss-select {
+        @apply rounded-xl border-sky-200 text-slate-800 shadow-sm focus:border-sky-500 focus:ring-sky-500;
+    }
+
+    .ss-btn-primary {
+        @apply inline-flex items-center rounded-xl border border-transparent bg-sky-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2;
+    }
+
+    .ss-btn-secondary {
+        @apply inline-flex items-center rounded-xl border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2;
+    }
+
+    .ss-btn-danger {
+        @apply inline-flex items-center rounded-xl border border-transparent bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2;
+    }
+
+    .ss-pill {
+        @apply inline-flex rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-800;
+    }
+}
