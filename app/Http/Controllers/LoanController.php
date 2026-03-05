@@ -14,27 +14,37 @@ class LoanController extends Controller
 {
     public function borrowed(): Response
     {
+        $user = auth()->user();
+        $canViewAll = $user->is_administrator || $user->is_site_owner;
+
         $loans = Loan::query()
-            ->with(['bookItem.book.authors', 'lender.officeLocation'])
-            ->where('borrower_id', auth()->id())
+            ->with(['bookItem.book.authors', 'lender.officeLocation', 'borrower.officeLocation'])
+            ->when($canViewAll, fn ($query) => $query->whereIn('status', ['approved', 'borrowed']))
+            ->when(! $canViewAll, fn ($query) => $query->where('borrower_id', $user->id))
             ->latest()
             ->get();
 
         return Inertia::render('Loans/Borrowed', [
             'loans' => $loans,
+            'isGlobalView' => $canViewAll,
         ]);
     }
 
     public function requests(): Response
     {
+        $user = auth()->user();
+        $canViewAll = $user->is_administrator || $user->is_site_owner;
+
         $loans = Loan::query()
-            ->with(['bookItem.book.authors', 'borrower.officeLocation'])
-            ->where('lender_id', auth()->id())
+            ->with(['bookItem.book.authors', 'borrower.officeLocation', 'lender.officeLocation'])
+            ->when($canViewAll, fn ($query) => $query->where('status', 'requested'))
+            ->when(! $canViewAll, fn ($query) => $query->where('lender_id', $user->id))
             ->latest()
             ->get();
 
         return Inertia::render('Loans/Requests', [
             'loans' => $loans,
+            'isGlobalView' => $canViewAll,
         ]);
     }
 
