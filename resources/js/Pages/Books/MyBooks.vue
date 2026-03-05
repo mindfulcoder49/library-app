@@ -1,11 +1,13 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 defineProps({
     items: Array,
 });
 
+const user = usePage().props.auth.user;
+const canModerate = user?.is_administrator || user?.is_site_owner;
 const form = useForm({});
 
 const doAction = (routeName, id) => {
@@ -35,7 +37,7 @@ const doAction = (routeName, id) => {
                     <div class="mt-3 flex flex-wrap gap-2">
                         <button v-if="item.status === 'removed'" @click="doAction('books.reshelve', item.id)" class="ss-btn-secondary">Reshelve</button>
                         <button v-if="item.status !== 'removed'" @click="doAction('books.remove', item.id)" class="ss-btn-danger">Remove</button>
-                        <button v-if="item.status === 'pending_verification'" @click="doAction('books.verify', item.id)" class="ss-btn-secondary">Verify</button>
+                        <button v-if="item.status === 'pending_verification' && canModerate" @click="doAction('books.verify', item.id)" class="ss-btn-secondary">Verify</button>
                     </div>
                 </div>
             </div>

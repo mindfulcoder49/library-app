@@ -9,6 +9,8 @@ import { Link, usePage } from '@inertiajs/vue3';
 
 const showingNavigationDropdown = ref(false);
 const flash = usePage().props.flash;
+const user = usePage().props.auth.user;
+const canModerate = user?.is_administrator || user?.is_site_owner;
 </script>
 
 <template>
@@ -28,6 +30,7 @@ const flash = usePage().props.flash;
                             <NavLink :href="route('dashboard')" :active="route().current('dashboard')">Dashboard</NavLink>
                             <NavLink :href="route('catalog.index')" :active="route().current('catalog.index')">Browse</NavLink>
                             <NavLink :href="route('books.mine')" :active="route().current('books.mine') || route().current('books.create')">My Books</NavLink>
+                            <NavLink v-if="canModerate" :href="route('books.pending-verification')" :active="route().current('books.pending-verification')">Verify Queue</NavLink>
                             <NavLink :href="route('loans.borrowed')" :active="route().current('loans.borrowed')">Borrowed</NavLink>
                             <NavLink :href="route('loans.requests')" :active="route().current('loans.requests')">Requests</NavLink>
                             <NavLink :href="route('reports.index')" :active="route().current('reports.index')">Reports</NavLink>
@@ -96,6 +99,7 @@ const flash = usePage().props.flash;
                     <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">Dashboard</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('catalog.index')" :active="route().current('catalog.index')">Browse</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('books.mine')" :active="route().current('books.mine') || route().current('books.create')">My Books</ResponsiveNavLink>
+                    <ResponsiveNavLink v-if="canModerate" :href="route('books.pending-verification')" :active="route().current('books.pending-verification')">Verify Queue</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('loans.borrowed')" :active="route().current('loans.borrowed')">Borrowed</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('loans.requests')" :active="route().current('loans.requests')">Requests</ResponsiveNavLink>
                     <ResponsiveNavLink :href="route('reports.index')" :active="route().current('reports.index')">Reports</ResponsiveNavLink>

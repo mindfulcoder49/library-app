@@ -67,7 +67,7 @@ const previewCsv = () => {
                 <h3 class="text-lg font-semibold text-slate-900">Bulk Upload via CSV</h3>
                 <p class="mt-2 text-sm text-slate-700">
                     Upload a CSV/TSV with columns:
-                    <span class="font-medium">ISBN-Emp, ISBN, Title, Author, Language, Book Type, Category 1-3, Description, Lender Comments, Lender ID, Office Locations, Status</span>.
+                    <span class="font-medium">ISBN-Emp, ISBN, Title, Author, Language, Book Type, Category 1-3, Description, Lender Comments, Lender ID, Office Locations, Status</span>. For non-admin users, uploaded books are always assigned to your own account and CSV Lender ID is ignored.
                 </p>
                 <p class="mt-1 text-sm text-slate-700">Office locations can be comma-separated (example: <span class="font-medium">OCB, CCB, JAB</span>).</p>
                 <div class="mt-3">

@@ -58,6 +58,40 @@ class BookItemController extends Controller
         ]);
     }
 
+    public function pendingVerification(Request $request): Response
+    {
+        abort_unless($request->user()->is_administrator || $request->user()->is_site_owner, 403);
+
+        $items = BookItem::query()
+            ->with(['book.authors', 'book.category', 'lender.officeLocation'])
+            ->where('status', 'pending_verification')
+            ->latest()
+            ->get()
+            ->map(fn (BookItem $item) => [
+                'id' => $item->id,
+                'unique_key' => $item->unique_key,
+                'created_at' => $item->created_at?->toDateTimeString(),
+                'book' => [
+                    'title' => $item->book->title,
+                    'isbn10' => $item->book->isbn10,
+                    'isbn13' => $item->book->isbn13,
+                    'description' => $item->book->description,
+                    'category' => optional($item->book->category)->name,
+                    'authors' => $item->book->authors->map(fn ($author) => $author->display_name)->values(),
+                ],
+                'lender' => [
+                    'name' => $item->lender->display_name,
+                    'employee_id' => $item->lender->employee_id,
+                    'office_location' => optional($item->lender->officeLocation)->name,
+                ],
+                'lender_comments' => $item->lender_comments,
+            ]);
+
+        return Inertia::render('Books/PendingVerification', [
+            'items' => $items,
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -271,6 +305,34 @@ class BookItemController extends Controller
         return back()->with('success', 'Book verified and available in catalog.');
     }
 
+    public function verifyBulk(Request $request): RedirectResponse
+    {
+        abort_unless($request->user()->is_administrator || $request->user()->is_site_owner, 403);
+
+        $validated = $request->validate([
+            'book_item_ids' => ['required', 'array', 'min:1'],
+            'book_item_ids.*' => ['integer', 'exists:book_items,id'],
+        ]);
+
+        $itemIds = collect($validated['book_item_ids'])->unique()->values()->all();
+
+        $updated = BookItem::query()
+            ->whereIn('id', $itemIds)
+            ->where('status', 'pending_verification')
+            ->update([
+                'status' => 'available',
+                'verified_at' => now(),
+                'removed_at' => null,
+                'updated_at' => now(),
+            ]);
+
+        if ($updated === 0) {
+            return back()->with('warning', 'No selected books were pending verification.');
+        }
+
+        return back()->with('success', "Verified {$updated} selected book(s).");
+    }
+
     public function remove(BookItem $bookItem): RedirectResponse
     {
         abort_unless($bookItem->lender_id === auth()->id(), 403);
@@ -349,7 +411,8 @@ class BookItemController extends Controller
             $book->authors()->syncWithoutDetaching($authorIds);
         }
 
-        $lender = $this->resolveLender($this->csvValue($row, 'lender_id'), $defaultUser);
+        $canAssignLenderFromCsv = $defaultUser->is_administrator || $defaultUser->is_site_owner;
+        $lender = $this->resolveLender($this->csvValue($row, 'lender_id'), $defaultUser, $canAssignLenderFromCsv);
         if (! $lender->is_lender) {
             $lender->update(['is_lender' => true]);
         }
@@ -464,8 +527,12 @@ class BookItemController extends Controller
         return $last;
     }
 
-    private function resolveLender(?string $employeeId, User $fallbackUser): User
+    private function resolveLender(?string $employeeId, User $fallbackUser, bool $canAssignFromCsv): User
     {
+        if (! $canAssignFromCsv) {
+            return $fallbackUser;
+        }
+
         if (! $employeeId) {
             return $fallbackUser;
         }

@@ -30,9 +30,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/books/mine', [BookItemController::class, 'index'])->name('books.mine');
     Route::get('/books/create', [BookItemController::class, 'create'])->name('books.create');
+    Route::get('/books/pending-verification', [BookItemController::class, 'pendingVerification'])->name('books.pending-verification');
     Route::post('/books', [BookItemController::class, 'store'])->name('books.store');
     Route::get('/books/import-template', [BookItemController::class, 'downloadImportTemplate'])->name('books.import-template');
     Route::post('/books/import-csv', [BookItemController::class, 'importCsv'])->name('books.import-csv');
+    Route::post('/books/verify-bulk', [BookItemController::class, 'verifyBulk'])->name('books.verify-bulk');
     Route::patch('/books/{bookItem}/verify', [BookItemController::class, 'verify'])->name('books.verify');
     Route::patch('/books/{bookItem}/remove', [BookItemController::class, 'remove'])->name('books.remove');
     Route::patch('/books/{bookItem}/reshelve', [BookItemController::class, 'reshelve'])->name('books.reshelve');

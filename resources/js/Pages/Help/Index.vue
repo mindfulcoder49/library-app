@@ -54,7 +54,7 @@ import { Head, Link } from '@inertiajs/vue3';
                     <li>Use the template from Add Book for the correct column order.</li>
                     <li>Run Preview (Dry Run) first to validate rows before importing.</li>
                     <li>Use comma-separated office codes in Office Locations, such as OCB, CCB, JAB.</li>
-                    <li>Use Lender ID when importing on behalf of another lender.</li>
+                    <li>Admins/site owners can use Lender ID to import on behalf of another lender. For all other users, books are assigned to the uploader.</li>
                 </ul>
             </section>
 
