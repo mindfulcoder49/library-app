@@ -360,15 +360,36 @@ npm run build
 
 ## Testing
 
-Current baseline test suite:
+The suite now includes comprehensive regression coverage for:
 - Auth and profile flows
-- Basic feature smoke coverage
+- Catalog defaults, filters, and facet consistency
+- Loan lifecycle transitions and invalid-transition guards
+- Waitlist lifecycle (join, cancel, rejoin, promotion)
+- CSV import edge cases and dry-run behavior
+- Verification queue bulk behavior on mixed statuses
+- Authorization/permission negative paths
+- Reporting aggregation correctness
 
 Run:
 
 ```bash
 ./vendor/bin/sail artisan test
 ```
+
+Run tests sequentially against the shared `testing` database. Parallel test execution can cause migration-table collisions in this environment.
+
+Primary feature test files:
+- `tests/Feature/LibraryWorkflowTest.php`
+- `tests/Feature/LoanWaitlistEdgeCaseTest.php`
+- `tests/Feature/LoanTransitionGuardTest.php`
+- `tests/Feature/BookStatusIntegrityTest.php`
+- `tests/Feature/CsvImportAndVerificationTest.php`
+- `tests/Feature/AuthorizationGuardsTest.php`
+- `tests/Feature/CatalogFacetFilterTest.php`
+- `tests/Feature/ReportsAggregationTest.php`
+
+Detailed coverage/permutation plan:
+- `docs/Test-Plan.md`
 
 ## Project Structure (High Value Files)
 

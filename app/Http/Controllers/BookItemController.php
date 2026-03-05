@@ -426,6 +426,7 @@ class BookItemController extends Controller
             $bookItem->lender_id === $user->id || $user->is_administrator || $user->is_site_owner,
             403
         );
+        abort_if($this->hasActiveLoan($bookItem), 422, 'Cannot remove a book with an active loan.');
 
         $bookItem->update([
             'status' => 'removed',
@@ -438,6 +439,7 @@ class BookItemController extends Controller
     public function markPending(BookItem $bookItem): RedirectResponse
     {
         abort_unless(auth()->user()->is_administrator || auth()->user()->is_site_owner, 403);
+        abort_if($this->hasActiveLoan($bookItem), 422, 'Cannot move to pending verification while the book has an active loan.');
 
         $bookItem->update([
             'status' => 'pending_verification',
@@ -470,6 +472,13 @@ class BookItemController extends Controller
             $bookItem->lender_id === $user->id || $user->is_administrator || $user->is_site_owner,
             403
         );
+    }
+
+    private function hasActiveLoan(BookItem $bookItem): bool
+    {
+        return $bookItem->loans()
+            ->whereIn('status', ['requested', 'approved', 'shared', 'borrowed'])
+            ->exists();
     }
 
     private function hasImportableData(array $row): bool

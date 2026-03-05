@@ -98,6 +98,16 @@ class LoanController extends Controller
         abort_unless($request->user()->is_borrower, 403);
         abort_if($bookItem->lender_id === $request->user()->id, 422, 'You cannot borrow your own book.');
 
+        $hasOpenLoanForItem = Loan::query()
+            ->where('book_item_id', $bookItem->id)
+            ->where('borrower_id', $request->user()->id)
+            ->whereIn('status', ['requested', 'approved', 'shared', 'borrowed'])
+            ->exists();
+
+        if ($hasOpenLoanForItem) {
+            return back()->with('warning', 'You already have an active request or loan for this book.');
+        }
+
         if ($bookItem->status !== 'available') {
             $existingEntry = WaitingListEntry::query()
                 ->where('book_id', $bookItem->book_id)
@@ -156,6 +166,7 @@ class LoanController extends Controller
     public function approve(Loan $loan): RedirectResponse
     {
         abort_unless($loan->lender_id === auth()->id(), 403);
+        abort_if($loan->status !== 'requested', 422, 'Only requested loans can be approved.');
 
         $loan->update([
             'status' => 'approved',
@@ -168,6 +179,7 @@ class LoanController extends Controller
     public function reject(Loan $loan): RedirectResponse
     {
         abort_unless($loan->lender_id === auth()->id(), 403);
+        abort_if($loan->status !== 'requested', 422, 'Only requested loans can be rejected.');
 
         $loan->update(['status' => 'rejected']);
         $loan->bookItem()->update(['status' => 'available']);
@@ -179,6 +191,7 @@ class LoanController extends Controller
     public function share(Loan $loan): RedirectResponse
     {
         abort_unless($loan->lender_id === auth()->id(), 403);
+        abort_if($loan->status !== 'approved', 422, 'Only approved loans can be marked shared.');
 
         $loan->update([
             'status' => 'borrowed',
@@ -197,6 +210,7 @@ class LoanController extends Controller
     public function returnBook(Loan $loan): RedirectResponse
     {
         abort_unless($loan->borrower_id === auth()->id() || $loan->lender_id === auth()->id(), 403);
+        abort_if($loan->status !== 'borrowed', 422, 'Only borrowed loans can be returned.');
 
         $loan->update([
             'status' => 'returned',
@@ -215,6 +229,7 @@ class LoanController extends Controller
     public function cancel(Loan $loan): RedirectResponse
     {
         abort_unless($loan->borrower_id === auth()->id() || $loan->lender_id === auth()->id(), 403);
+        abort_if(! in_array($loan->status, ['requested', 'approved'], true), 422, 'Only requested or approved loans can be cancelled.');
 
         $loan->update(['status' => 'cancelled']);
 
