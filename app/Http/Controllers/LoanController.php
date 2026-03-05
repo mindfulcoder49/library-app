@@ -9,6 +9,7 @@ use App\Models\WaitingListEntry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -98,20 +99,35 @@ class LoanController extends Controller
         abort_if($bookItem->lender_id === $request->user()->id, 422, 'You cannot borrow your own book.');
 
         if ($bookItem->status !== 'available') {
-            $existingEntry = WaitingListEntry::query()->firstOrCreate([
+            $existingEntry = WaitingListEntry::query()
+                ->where('book_id', $bookItem->book_id)
+                ->where('user_id', $request->user()->id)
+                ->first();
+
+            if ($existingEntry) {
+                if (in_array($existingEntry->status, ['waiting', 'notified'], true)) {
+                    return back()->with('warning', 'You are already on the waiting list for this book.');
+                }
+
+                $existingEntry->update([
+                    'book_item_id' => $bookItem->id,
+                    'status' => 'waiting',
+                    'position' => $this->nextWaitlistPosition($bookItem->book_id),
+                    'notified_at' => null,
+                ]);
+
+                return back()->with('success', "You have rejoined the waiting list at position {$existingEntry->position}.");
+            }
+
+            $newEntry = WaitingListEntry::query()->create([
                 'book_id' => $bookItem->book_id,
                 'book_item_id' => $bookItem->id,
                 'user_id' => $request->user()->id,
-            ], [
                 'status' => 'waiting',
                 'position' => $this->nextWaitlistPosition($bookItem->book_id),
             ]);
 
-            if (! $existingEntry->wasRecentlyCreated) {
-                return back()->with('warning', 'You are already on the waiting list for this book.');
-            }
-
-            return back()->with('success', "Book is unavailable. Added to waiting list at position {$existingEntry->position}.");
+            return back()->with('success', "Book is unavailable. Added to waiting list at position {$newEntry->position}.");
         }
 
         Loan::query()->create([
@@ -155,9 +171,9 @@ class LoanController extends Controller
 
         $loan->update(['status' => 'rejected']);
         $loan->bookItem()->update(['status' => 'available']);
-        $this->notifyNextWaitingEntry($loan->bookItem);
+        $this->promoteNextWaitlistedBorrower($loan->bookItem);
 
-        return back()->with('success', 'Loan request rejected. Book is available again.');
+        return back()->with('success', 'Loan request rejected.');
     }
 
     public function share(Loan $loan): RedirectResponse
@@ -191,9 +207,9 @@ class LoanController extends Controller
             'status' => 'available',
             'expected_return_date' => null,
         ]);
-        $this->notifyNextWaitingEntry($loan->bookItem);
+        $this->promoteNextWaitlistedBorrower($loan->bookItem);
 
-        return back()->with('success', 'Return recorded and book reshelved.');
+        return back()->with('success', 'Return recorded.');
     }
 
     public function cancel(Loan $loan): RedirectResponse
@@ -204,7 +220,7 @@ class LoanController extends Controller
 
         if ($loan->bookItem->status === 'loan_pending') {
             $loan->bookItem()->update(['status' => 'available']);
-            $this->notifyNextWaitingEntry($loan->bookItem);
+            $this->promoteNextWaitlistedBorrower($loan->bookItem);
         }
 
         return back()->with('success', 'Loan request cancelled.');
@@ -237,26 +253,53 @@ class LoanController extends Controller
         }
     }
 
-    private function notifyNextWaitingEntry(BookItem $bookItem): void
+    private function promoteNextWaitlistedBorrower(BookItem $bookItem): void
     {
-        $nextEntry = WaitingListEntry::query()
-            ->where('book_id', $bookItem->book_id)
-            ->where('status', 'waiting')
-            ->orderBy('position')
-            ->orderBy('created_at')
-            ->first();
+        DB::transaction(function () use ($bookItem): void {
+            $freshItem = BookItem::query()->lockForUpdate()->find($bookItem->id);
+            if (! $freshItem || $freshItem->status !== 'available') {
+                return;
+            }
 
-        if (! $nextEntry) {
-            return;
-        }
+            $nextEntry = WaitingListEntry::query()
+                ->where('book_id', $freshItem->book_id)
+                ->whereIn('status', ['waiting', 'notified'])
+                ->orderByRaw("CASE status WHEN 'notified' THEN 0 WHEN 'waiting' THEN 1 ELSE 2 END")
+                ->orderBy('position')
+                ->orderBy('created_at')
+                ->lockForUpdate()
+                ->first();
 
-        $nextEntry->update([
-            'status' => 'notified',
-            'notified_at' => now(),
-            'book_item_id' => $bookItem->id,
-        ]);
+            if (! $nextEntry) {
+                return;
+            }
 
-        $this->rebalanceWaitlistPositions($bookItem->book_id);
+            $hasOpenLoan = Loan::query()
+                ->where('book_item_id', $freshItem->id)
+                ->where('borrower_id', $nextEntry->user_id)
+                ->whereIn('status', ['requested', 'approved', 'shared', 'borrowed'])
+                ->exists();
+
+            if (! $hasOpenLoan) {
+                Loan::query()->create([
+                    'book_item_id' => $freshItem->id,
+                    'lender_id' => $freshItem->lender_id,
+                    'borrower_id' => $nextEntry->user_id,
+                    'status' => 'requested',
+                    'requested_at' => now(),
+                    'notes' => 'Auto-created from waitlist queue.',
+                ]);
+            }
+
+            $nextEntry->update([
+                'status' => 'fulfilled',
+                'notified_at' => now(),
+                'book_item_id' => $freshItem->id,
+            ]);
+
+            $freshItem->update(['status' => 'loan_pending']);
+            $this->rebalanceWaitlistPositions($freshItem->book_id);
+        });
     }
 
     private function validateLoanFilters(Request $request): array
