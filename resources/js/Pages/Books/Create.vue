@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
@@ -7,7 +8,7 @@ const props = defineProps({
     languages: Array,
 });
 const page = usePage();
-const importPreview = page.props.flash?.import_preview;
+const importPreview = computed(() => page.props.flash?.import_preview ?? null);
 
 const form = useForm({
     title: '',
