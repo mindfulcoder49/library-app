@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\OfficeLocation;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ class ProfileController extends Controller
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
+            'officeLocations' => OfficeLocation::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -29,13 +31,28 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $validated = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $user->fill([
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'name' => trim($validated['first_name'].' '.$validated['last_name']),
+            'employee_id' => $validated['employee_id'],
+            'email' => $validated['email'],
+            'office_location_id' => $validated['office_location_id'],
+            'is_lender' => (bool) $validated['is_lender'],
+            'is_borrower' => (bool) $validated['is_borrower'],
+            'agree_lender_guidelines' => (bool) ($validated['agree_lender_guidelines'] ?? false),
+            'agree_borrower_guidelines' => (bool) ($validated['agree_borrower_guidelines'] ?? false),
+        ]);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
+        $user->shareLocations()->sync($validated['share_location_ids'] ?? []);
 
         return Redirect::route('profile.edit');
     }

@@ -12,6 +12,10 @@ defineProps({
     status: {
         type: String,
     },
+    officeLocations: {
+        type: Array,
+        default: () => [],
+    },
 });
 </script>
 
@@ -35,6 +39,7 @@ defineProps({
                     <UpdateProfileInformationForm
                         :must-verify-email="mustVerifyEmail"
                         :status="status"
+                        :office-locations="officeLocations"
                         class="max-w-xl"
                     />
                 </div>

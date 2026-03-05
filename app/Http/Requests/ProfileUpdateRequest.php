@@ -16,7 +16,14 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:120'],
+            'last_name' => ['required', 'string', 'max:120'],
+            'employee_id' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique(User::class)->ignore($this->user()->id),
+            ],
             'email' => [
                 'required',
                 'string',
@@ -25,6 +32,13 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            'office_location_id' => ['required', 'integer', 'exists:office_locations,id'],
+            'share_location_ids' => ['nullable', 'array'],
+            'share_location_ids.*' => ['integer', 'exists:office_locations,id'],
+            'is_lender' => ['required', 'boolean'],
+            'is_borrower' => ['required', 'boolean'],
+            'agree_lender_guidelines' => ['nullable', 'accepted', 'required_if:is_lender,1'],
+            'agree_borrower_guidelines' => ['nullable', 'accepted', 'required_if:is_borrower,1'],
         ];
     }
 }
