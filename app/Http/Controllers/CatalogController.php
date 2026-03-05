@@ -18,6 +18,7 @@ class CatalogController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
+        $canModerate = $user && ($user->is_administrator || $user->is_site_owner);
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:255'],
             'title' => ['nullable', 'string', 'max:255'],
@@ -48,6 +49,7 @@ class CatalogController extends Controller
         }
 
         $query = BookItem::query()
+            ->when(! $canModerate, fn (Builder $query) => $query->where('status', '!=', 'pending_verification'))
             ->when(($filters['availability'] ?? 'all') === 'available', function (Builder $query) {
                 $query->where('status', 'available');
             })

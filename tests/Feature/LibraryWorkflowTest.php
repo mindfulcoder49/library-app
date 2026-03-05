@@ -42,6 +42,41 @@ class LibraryWorkflowTest extends TestCase
         $this->assertNotSame($availableItem->id, $checkedOutItem->id);
     }
 
+    public function test_pending_verification_items_are_hidden_from_non_admin_users_but_visible_to_admin(): void
+    {
+        $lender = User::factory()->create(['name' => 'Lender User']);
+        $nonAdmin = User::factory()->create([
+            'is_administrator' => false,
+            'is_site_owner' => false,
+        ]);
+        $admin = User::factory()->create([
+            'is_administrator' => true,
+            'is_site_owner' => true,
+        ]);
+
+        $pending = $this->makeBookItem($lender->id, 'pending_verification');
+        $available = $this->makeBookItem($lender->id, 'available');
+
+        $this->actingAs($nonAdmin)
+            ->get(route('catalog.index', ['availability' => 'all']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Catalog/Index')
+                ->has('items.data', 1)
+                ->where('items.data.0.id', $available->id)
+            );
+
+        $this->actingAs($admin)
+            ->get(route('catalog.index', ['availability' => 'all']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Catalog/Index')
+                ->has('items.data', 2)
+            );
+
+        $this->assertNotSame($pending->id, $available->id);
+    }
+
     public function test_user_can_join_waitlist_cancel_and_rejoin_for_same_book(): void
     {
         $lender = User::factory()->create(['name' => 'Lender User', 'is_lender' => true]);
