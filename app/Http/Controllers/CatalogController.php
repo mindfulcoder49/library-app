@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\BookItem;
 use App\Models\Category;
+use App\Models\Loan;
 use App\Models\OfficeLocation;
+use App\Models\WaitingListEntry;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +17,7 @@ class CatalogController extends Controller
 {
     public function index(Request $request): Response
     {
+        $user = $request->user();
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:255'],
             'title' => ['nullable', 'string', 'max:255'],
@@ -25,6 +28,24 @@ class CatalogController extends Controller
             'book_type' => ['nullable', 'in:hard_copy,online'],
             'availability' => ['nullable', 'in:available,all'],
         ]);
+
+        $requestedBookItemLookup = [];
+        $waitlistBookLookup = [];
+        if ($user) {
+            $requestedBookItemLookup = Loan::query()
+                ->where('borrower_id', $user->id)
+                ->whereIn('status', ['requested', 'approved', 'shared', 'borrowed'])
+                ->pluck('book_item_id')
+                ->flip()
+                ->all();
+
+            $waitlistBookLookup = WaitingListEntry::query()
+                ->where('user_id', $user->id)
+                ->whereIn('status', ['waiting', 'notified'])
+                ->pluck('book_id')
+                ->flip()
+                ->all();
+        }
 
         $query = BookItem::query()
             ->when(($filters['availability'] ?? 'all') === 'available', function (Builder $query) {
@@ -74,7 +95,10 @@ class CatalogController extends Controller
             ->latest()
             ->paginate(12)
             ->withQueryString()
-            ->through(function (BookItem $item): array {
+            ->through(function (BookItem $item) use ($requestedBookItemLookup, $waitlistBookLookup): array {
+                $hasRequested = isset($requestedBookItemLookup[$item->id]);
+                $onWaitlist = isset($waitlistBookLookup[$item->book_id]);
+
                 return [
                     'id' => $item->id,
                     'unique_key' => $item->unique_key,
@@ -94,6 +118,10 @@ class CatalogController extends Controller
                         'id' => $item->lender->id,
                         'name' => $item->lender->display_name,
                         'office_location' => optional($item->lender->officeLocation)->name,
+                    ],
+                    'user_context' => [
+                        'has_requested' => $hasRequested,
+                        'on_waitlist' => $onWaitlist,
                     ],
                 ];
             });

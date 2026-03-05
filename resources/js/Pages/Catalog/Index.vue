@@ -212,6 +212,18 @@ const isAdminUser = () => {
                             <p class="text-sm text-slate-600">Office: {{ item.lender.office_location || 'Unknown' }}</p>
                             <p class="text-sm text-slate-600">Lender: {{ item.lender.name }}</p>
                             <p class="mt-2"><span class="ss-pill">{{ item.status }}</span></p>
+                            <p
+                                v-if="item.user_context?.has_requested"
+                                class="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800"
+                            >
+                                You have already requested this book.
+                            </p>
+                            <p
+                                v-else-if="item.user_context?.on_waitlist"
+                                class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900"
+                            >
+                                You are on the waitlist for this book.
+                            </p>
                             <p v-if="item.book.description" class="mt-2 text-sm text-slate-700">{{ item.book.description }}</p>
                             <p v-if="item.lender_comments" class="mt-2 text-sm text-slate-700"><span class="font-semibold text-slate-900">Lender Comments:</span> {{ item.lender_comments }}</p>
                             <a
