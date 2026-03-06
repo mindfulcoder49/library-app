@@ -11,7 +11,7 @@ import { Link } from '@inertiajs/vue3';
             <Link href="/" class="inline-flex items-center gap-3">
                 <ApplicationLogo class="h-16 w-16 fill-current text-sky-700" />
                 <div class="hidden sm:block">
-                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">State Street</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-sky-700">Check It Out</p>
                     <p class="text-2xl font-semibold text-slate-900">Check It Out</p>
                 </div>
             </Link>

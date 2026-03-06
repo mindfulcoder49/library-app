@@ -18,7 +18,7 @@ defineProps({
 
             <div class="relative mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-8 sm:px-8 lg:px-10">
                 <header class="flex items-center justify-between">
-                    <div class="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">State Street | Check It Out</div>
+                    <div class="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-200">Check It Out</div>
                     <nav v-if="canLogin" class="flex items-center gap-3 text-sm">
                         <Link
                             v-if="$page.props.auth.user"
@@ -47,7 +47,7 @@ defineProps({
                             Build a stronger DEI culture with a global, employee-powered library.
                         </h1>
                         <p class="mt-6 max-w-2xl text-base leading-relaxed text-slate-200/90 sm:text-lg">
-                            Check It Out helps State Street teams share impactful books, spark discussion, and broaden perspectives across offices and virtual communities.
+                            Check It Out helps teams share impactful books, spark discussion, and broaden perspectives across offices and virtual communities.
                         </p>
 
                         <div class="mt-8 flex flex-wrap gap-3">
