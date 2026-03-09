@@ -1,9 +1,12 @@
 <script setup>
+import { computed, watch } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 
 const props = defineProps({
-    categories: Array,
+    categoryTier1: Array,
+    categoryTier2: Array,
+    categoryTier3: Array,
     languages: Array,
     item: Object,
 });
@@ -13,8 +16,14 @@ const form = useForm({
     isbn10: props.item.book.isbn10 ?? '',
     isbn13: props.item.book.isbn13 ?? '',
     description: props.item.book.description ?? '',
-    category_id: props.item.book.category_id ?? '',
+    category_1_id: props.item.book.category_1_id ?? '',
+    category_1_name: '',
+    category_2_id: props.item.book.category_2_id ?? '',
+    category_2_name: '',
+    category_3_id: props.item.book.category_3_id ?? '',
+    category_3_name: '',
     language_id: props.item.book.language_id ?? '',
+    language_name: props.item.book.language_name ?? '',
     book_type: props.item.book.book_type ?? 'hard_copy',
     lender_comments: props.item.lender_comments ?? '',
     expected_return_date: props.item.expected_return_date ?? '',
@@ -24,6 +33,37 @@ const form = useForm({
 const addAuthor = () => {
     form.authors.push({ first_name: '', last_name: '' });
 };
+
+const filteredTier2 = computed(() => {
+    if (!form.category_1_id) return props.categoryTier2 ?? [];
+    return (props.categoryTier2 ?? []).filter((item) => String(item.parent_id) === String(form.category_1_id));
+});
+
+const filteredTier3 = computed(() => {
+    if (!form.category_2_id) return props.categoryTier3 ?? [];
+    return (props.categoryTier3 ?? []).filter((item) => String(item.parent_id) === String(form.category_2_id));
+});
+
+watch(
+    () => form.category_1_id,
+    () => {
+        if (!filteredTier2.value.some((item) => String(item.id) === String(form.category_2_id))) {
+            form.category_2_id = '';
+        }
+        if (!filteredTier3.value.some((item) => String(item.id) === String(form.category_3_id))) {
+            form.category_3_id = '';
+        }
+    }
+);
+
+watch(
+    () => form.category_2_id,
+    () => {
+        if (!filteredTier3.value.some((item) => String(item.id) === String(form.category_3_id))) {
+            form.category_3_id = '';
+        }
+    }
+);
 
 const submit = () => {
     form.patch(route('books.update', props.item.id));
@@ -46,15 +86,36 @@ const submit = () => {
                     <input v-model="form.isbn13" class="ss-input" placeholder="ISBN-13" />
                 </div>
                 <textarea v-model="form.description" class="w-full ss-input" rows="4" placeholder="Description"></textarea>
+                <div class="space-y-3 rounded border border-slate-200 p-3">
+                    <p class="text-sm font-semibold text-slate-900">Category</p>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <select v-model="form.category_1_id" class="ss-input">
+                            <option value="">Category 1 (existing)</option>
+                            <option v-for="category in props.categoryTier1" :key="category.id" :value="category.id">{{ category.name }}</option>
+                        </select>
+                        <input v-model="form.category_1_name" class="ss-input" placeholder="Category 1 (new name)" />
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <select v-model="form.category_2_id" class="ss-input">
+                            <option value="">Category 2 (existing)</option>
+                            <option v-for="category in filteredTier2" :key="category.id" :value="category.id">{{ category.name }}</option>
+                        </select>
+                        <input v-model="form.category_2_name" class="ss-input" placeholder="Category 2 (new name)" />
+                    </div>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <select v-model="form.category_3_id" class="ss-input">
+                            <option value="">Category 3 (existing)</option>
+                            <option v-for="category in filteredTier3" :key="category.id" :value="category.id">{{ category.name }}</option>
+                        </select>
+                        <input v-model="form.category_3_name" class="ss-input" placeholder="Category 3 (new name)" />
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <select v-model="form.category_id" class="ss-input">
-                        <option value="">Category</option>
-                        <option v-for="category in props.categories" :key="category.id" :value="category.id">{{ category.name }}</option>
-                    </select>
                     <select v-model="form.language_id" class="ss-input">
-                        <option value="">Language</option>
+                        <option value="">Language (existing)</option>
                         <option v-for="language in props.languages" :key="language.id" :value="language.id">{{ language.name }}</option>
                     </select>
+                    <input v-model="form.language_name" class="ss-input" placeholder="Language (new name)" />
                 </div>
                 <select v-model="form.book_type" class="w-full ss-input">
                     <option value="hard_copy">Hard Copy</option>

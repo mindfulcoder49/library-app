@@ -2,10 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
 use App\Models\City;
 use App\Models\Country;
-use App\Models\Language;
 use App\Models\OfficeLocation;
 use Illuminate\Database\Seeder;
 
@@ -34,26 +32,5 @@ class ReferenceDataSeeder extends Seeder
             OfficeLocation::query()->firstOrCreate(['name' => $office['name']], $office + ['is_active' => true]);
         }
 
-        foreach ([
-            ['name' => 'English', 'iso_code' => 'en'],
-            ['name' => 'Spanish', 'iso_code' => 'es'],
-            ['name' => 'French', 'iso_code' => 'fr'],
-            ['name' => 'Portuguese', 'iso_code' => 'pt'],
-            ['name' => 'Hindi', 'iso_code' => 'hi'],
-        ] as $language) {
-            Language::query()->firstOrCreate(['name' => $language['name']], $language);
-        }
-
-        $dei = Category::query()->firstOrCreate(['name' => 'Diversity, Equity and Inclusion', 'parent_id' => null], ['tier' => 1]);
-        $leadership = Category::query()->firstOrCreate(['name' => 'Leadership', 'parent_id' => null], ['tier' => 1]);
-
-        $inclusion = Category::query()->firstOrCreate(['name' => 'Inclusion', 'parent_id' => $dei->id], ['tier' => 2]);
-        $equity = Category::query()->firstOrCreate(['name' => 'Equity', 'parent_id' => $dei->id], ['tier' => 2]);
-        $allyship = Category::query()->firstOrCreate(['name' => 'Allyship', 'parent_id' => $dei->id], ['tier' => 2]);
-
-        Category::query()->firstOrCreate(['name' => 'Race and Identity', 'parent_id' => $inclusion->id], ['tier' => 3]);
-        Category::query()->firstOrCreate(['name' => 'Gender Equity', 'parent_id' => $equity->id], ['tier' => 3]);
-        Category::query()->firstOrCreate(['name' => 'Inclusive Leadership', 'parent_id' => $leadership->id], ['tier' => 2]);
-        Category::query()->firstOrCreate(['name' => 'Cross-Cultural Communication', 'parent_id' => $allyship->id], ['tier' => 3]);
     }
 }

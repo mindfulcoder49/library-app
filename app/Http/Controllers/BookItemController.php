@@ -16,6 +16,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -53,7 +54,9 @@ class BookItemController extends Controller
     public function create(): Response
     {
         return Inertia::render('Books/Create', [
-            'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
+            'categoryTier1' => Category::query()->where('tier', 1)->orderBy('name')->get(['id', 'name']),
+            'categoryTier2' => Category::query()->where('tier', 2)->orderBy('name')->get(['id', 'name', 'parent_id']),
+            'categoryTier3' => Category::query()->where('tier', 3)->orderBy('name')->get(['id', 'name', 'parent_id']),
             'languages' => Language::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -62,10 +65,13 @@ class BookItemController extends Controller
     {
         $this->authorizeBookItemEdit($request->user(), $bookItem);
 
-        $bookItem->load(['book.authors', 'book.category', 'book.language']);
+        $bookItem->load(['book.authors', 'book.category.parent.parent', 'book.language']);
+        $categoryTierIds = $this->extractCategoryTierIds($bookItem->book->category);
 
         return Inertia::render('Books/Edit', [
-            'categories' => Category::query()->orderBy('name')->get(['id', 'name']),
+            'categoryTier1' => Category::query()->where('tier', 1)->orderBy('name')->get(['id', 'name']),
+            'categoryTier2' => Category::query()->where('tier', 2)->orderBy('name')->get(['id', 'name', 'parent_id']),
+            'categoryTier3' => Category::query()->where('tier', 3)->orderBy('name')->get(['id', 'name', 'parent_id']),
             'languages' => Language::query()->orderBy('name')->get(['id', 'name']),
             'item' => [
                 'id' => $bookItem->id,
@@ -79,8 +85,11 @@ class BookItemController extends Controller
                     'isbn13' => $bookItem->book->isbn13,
                     'description' => $bookItem->book->description,
                     'book_type' => $bookItem->book->book_type,
-                    'category_id' => $bookItem->book->category_id,
+                    'category_1_id' => $categoryTierIds['category_1_id'],
+                    'category_2_id' => $categoryTierIds['category_2_id'],
+                    'category_3_id' => $categoryTierIds['category_3_id'],
                     'language_id' => $bookItem->book->language_id,
+                    'language_name' => optional($bookItem->book->language)->name,
                     'authors' => $bookItem->book->authors
                         ->map(fn ($author) => ['first_name' => $author->first_name, 'last_name' => $author->last_name])
                         ->values()
@@ -134,8 +143,14 @@ class BookItemController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'book_type' => ['required', 'in:hard_copy,online'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_1_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_1_name' => ['nullable', 'string', 'max:255'],
+            'category_2_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_2_name' => ['nullable', 'string', 'max:255'],
+            'category_3_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_3_name' => ['nullable', 'string', 'max:255'],
             'language_id' => ['nullable', 'integer', 'exists:languages,id'],
+            'language_name' => ['nullable', 'string', 'max:120'],
             'lender_comments' => ['nullable', 'string'],
             'expected_return_date' => ['nullable', 'date'],
             'authors' => ['required', 'array', 'min:1'],
@@ -144,16 +159,18 @@ class BookItemController extends Controller
         ]);
 
         $user = $request->user();
+        $category = $this->resolveCategoryFromSelection($validated);
+        $language = $this->resolveLanguageFromSelection($validated);
 
-        DB::transaction(function () use ($validated, $user): void {
+        DB::transaction(function () use ($validated, $user, $category, $language): void {
             $book = Book::query()->create([
                 'isbn10' => $validated['isbn10'] ?? null,
                 'isbn13' => $validated['isbn13'] ?? null,
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'book_type' => $validated['book_type'],
-                'category_id' => $validated['category_id'] ?? null,
-                'language_id' => $validated['language_id'] ?? null,
+                'category_id' => $category?->id,
+                'language_id' => $language?->id,
             ]);
 
             $authorIds = collect($validated['authors'])
@@ -195,24 +212,32 @@ class BookItemController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'book_type' => ['required', 'in:hard_copy,online'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_1_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_1_name' => ['nullable', 'string', 'max:255'],
+            'category_2_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_2_name' => ['nullable', 'string', 'max:255'],
+            'category_3_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_3_name' => ['nullable', 'string', 'max:255'],
             'language_id' => ['nullable', 'integer', 'exists:languages,id'],
+            'language_name' => ['nullable', 'string', 'max:120'],
             'lender_comments' => ['nullable', 'string'],
             'expected_return_date' => ['nullable', 'date'],
             'authors' => ['required', 'array', 'min:1'],
             'authors.*.first_name' => ['nullable', 'string', 'max:120'],
             'authors.*.last_name' => ['required', 'string', 'max:120'],
         ]);
+        $category = $this->resolveCategoryFromSelection($validated);
+        $language = $this->resolveLanguageFromSelection($validated);
 
-        DB::transaction(function () use ($validated, $bookItem): void {
+        DB::transaction(function () use ($validated, $bookItem, $category, $language): void {
             $bookItem->book()->update([
                 'isbn10' => $validated['isbn10'] ?? null,
                 'isbn13' => $validated['isbn13'] ?? null,
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'book_type' => $validated['book_type'],
-                'category_id' => $validated['category_id'] ?? null,
-                'language_id' => $validated['language_id'] ?? null,
+                'category_id' => $category?->id,
+                'language_id' => $language?->id,
             ]);
 
             $authorIds = collect($validated['authors'])
@@ -649,6 +674,122 @@ class BookItemController extends Controller
         }
 
         return $last;
+    }
+
+    private function resolveCategoryFromSelection(array $validated): ?Category
+    {
+        $hasTier1 = $this->hasTierInput($validated, 1);
+        $hasTier2 = $this->hasTierInput($validated, 2);
+        $hasTier3 = $this->hasTierInput($validated, 3);
+
+        if ($hasTier2 && ! $hasTier1) {
+            throw ValidationException::withMessages([
+                'category_1_id' => 'Category 1 must be selected or entered before Category 2.',
+            ]);
+        }
+
+        if ($hasTier3 && ! $hasTier2) {
+            throw ValidationException::withMessages([
+                'category_2_id' => 'Category 2 must be selected or entered before Category 3.',
+            ]);
+        }
+
+        $tier1 = $this->resolveCategoryTierNode(
+            1,
+            null,
+            $validated['category_1_id'] ?? null,
+            $validated['category_1_name'] ?? null
+        );
+        $tier2 = $this->resolveCategoryTierNode(
+            2,
+            $tier1,
+            $validated['category_2_id'] ?? null,
+            $validated['category_2_name'] ?? null
+        );
+        $tier3 = $this->resolveCategoryTierNode(
+            3,
+            $tier2,
+            $validated['category_3_id'] ?? null,
+            $validated['category_3_name'] ?? null
+        );
+
+        return $tier3 ?? $tier2 ?? $tier1;
+    }
+
+    private function hasTierInput(array $validated, int $tier): bool
+    {
+        return ! empty($validated["category_{$tier}_id"]) || ! empty(trim((string) ($validated["category_{$tier}_name"] ?? '')));
+    }
+
+    private function resolveCategoryTierNode(int $tier, ?Category $parent, ?int $categoryId, ?string $categoryName): ?Category
+    {
+        $cleanName = trim((string) ($categoryName ?? ''));
+        $cleanName = $cleanName !== '' ? $cleanName : null;
+
+        if (! $categoryId && ! $cleanName) {
+            return null;
+        }
+
+        if ($categoryId) {
+            $category = Category::query()->findOrFail($categoryId);
+            if ((int) $category->tier !== $tier) {
+                throw ValidationException::withMessages([
+                    "category_{$tier}_id" => "Selected Category {$tier} is invalid.",
+                ]);
+            }
+
+            $expectedParentId = $parent?->id;
+            if ((int) ($category->parent_id ?? 0) !== (int) ($expectedParentId ?? 0)) {
+                throw ValidationException::withMessages([
+                    "category_{$tier}_id" => "Selected Category {$tier} does not match the selected parent category.",
+                ]);
+            }
+
+            return $category;
+        }
+
+        return Category::query()->firstOrCreate(
+            ['name' => $cleanName, 'parent_id' => $parent?->id],
+            ['tier' => $tier]
+        );
+    }
+
+    private function resolveLanguageFromSelection(array $validated): ?Language
+    {
+        if (! empty($validated['language_id'])) {
+            return Language::query()->find($validated['language_id']);
+        }
+
+        $languageName = trim((string) ($validated['language_name'] ?? ''));
+        if ($languageName === '') {
+            return null;
+        }
+
+        return Language::query()->firstOrCreate(['name' => $languageName]);
+    }
+
+    private function extractCategoryTierIds(?Category $category): array
+    {
+        $result = [
+            'category_1_id' => null,
+            'category_2_id' => null,
+            'category_3_id' => null,
+        ];
+
+        $cursor = $category;
+        while ($cursor) {
+            if ((int) $cursor->tier === 1) {
+                $result['category_1_id'] = $cursor->id;
+            } elseif ((int) $cursor->tier === 2) {
+                $result['category_2_id'] = $cursor->id;
+            } elseif ((int) $cursor->tier === 3) {
+                $result['category_3_id'] = $cursor->id;
+            }
+
+            $cursor = $cursor->parent;
+        }
+
+        return $result;
     }
 
     private function resolveLender(?string $employeeId, User $fallbackUser, bool $canAssignFromCsv): User

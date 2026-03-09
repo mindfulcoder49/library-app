@@ -67,7 +67,7 @@ class CatalogFacetFilterTest extends TestCase
 
         $this->get(route('catalog.index', [
             'q' => 'Race',
-            'category_id' => $catRace->id,
+            'category' => 'race',
             'office_location_id' => $officeA->id,
             'language_id' => $langEn->id,
             'book_type' => 'hard_copy',
@@ -77,7 +77,7 @@ class CatalogFacetFilterTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Catalog/Index')
                 ->where('filters.q', 'Race')
-                ->where('filters.category_id', (string) $catRace->id)
+                ->where('filters.category', 'race')
                 ->where('filters.office_location_id', (string) $officeA->id)
                 ->where('filters.language_id', (string) $langEn->id)
                 ->where('filters.book_type', 'hard_copy')
@@ -96,6 +96,56 @@ class CatalogFacetFilterTest extends TestCase
                 ->has('facets.book_types', 1)
                 ->where('facets.book_types.0.book_type', 'hard_copy')
                 ->where('facets.book_types.0.total', 1)
+            );
+    }
+
+    public function test_category_facets_are_deduplicated_by_category_name(): void
+    {
+        $office = OfficeLocation::query()->create(['name' => 'OCB']);
+        $lender = User::factory()->create(['office_location_id' => $office->id]);
+
+        $root = Category::query()->create(['name' => 'Root', 'tier' => 1]);
+        $socialJusticeA = Category::query()->create(['name' => 'Social Justice', 'parent_id' => $root->id, 'tier' => 2]);
+        $otherRoot = Category::query()->create(['name' => 'Other', 'tier' => 1]);
+        $socialJusticeB = Category::query()->create(['name' => 'Social Justice', 'parent_id' => $otherRoot->id, 'tier' => 2]);
+
+        $bookA = Book::query()->create([
+            'title' => 'Book A',
+            'book_type' => 'hard_copy',
+            'category_id' => $socialJusticeA->id,
+        ]);
+        $bookB = Book::query()->create([
+            'title' => 'Book B',
+            'book_type' => 'hard_copy',
+            'category_id' => $socialJusticeB->id,
+        ]);
+
+        BookItem::query()->create([
+            'book_id' => $bookA->id,
+            'lender_id' => $lender->id,
+            'unique_key' => 'SJ-A',
+            'status' => 'available',
+        ]);
+        BookItem::query()->create([
+            'book_id' => $bookB->id,
+            'lender_id' => $lender->id,
+            'unique_key' => 'SJ-B',
+            'status' => 'available',
+        ]);
+
+        $this->get(route('catalog.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Catalog/Index')
+                ->where('facets.categories', function ($facets): bool {
+                    $facetArray = is_array($facets) ? $facets : $facets->toArray();
+                    $socialJustice = array_values(array_filter(
+                        $facetArray,
+                        fn (array $facet) => mb_strtolower($facet['name']) === 'social justice'
+                    ));
+
+                    return count($socialJustice) === 1 && (int) $socialJustice[0]['total'] === 2;
+                })
             );
     }
 }
