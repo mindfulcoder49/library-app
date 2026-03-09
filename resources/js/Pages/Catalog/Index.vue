@@ -20,7 +20,8 @@ const form = useForm({
     q: props.filters.q ?? '',
     title: props.filters.title ?? '',
     author: props.filters.author ?? '',
-    category: props.filters.category ?? '',
+    category_2: props.filters.category_2 ?? '',
+    category_3: props.filters.category_3 ?? '',
     category_1_id: props.filters.category_1_id ?? '',
     category_2_id: props.filters.category_2_id ?? '',
     category_3_id: props.filters.category_3_id ?? '',
@@ -41,7 +42,8 @@ const setFacet = (key, value) => {
 };
 
 const clearFacets = () => {
-    form.category = '';
+    form.category_2 = '';
+    form.category_3 = '';
     form.category_1_id = '';
     form.category_2_id = '';
     form.category_3_id = '';
@@ -51,11 +53,17 @@ const clearFacets = () => {
     search();
 };
 
-const normalizeCategoryValue = (value) => {
-    if (!value) return '';
+watch(() => form.category_2_id, () => {
+    if (form.category_2_id) {
+        form.category_2 = '';
+    }
+});
 
-    return String(value).replace(/\u00A0/g, ' ').trim().toLowerCase();
-};
+watch(() => form.category_3_id, () => {
+    if (form.category_3_id) {
+        form.category_3 = '';
+    }
+});
 
 const filteredTier1Options = computed(() => {
     let options = props.categoryTier1 ?? [];
@@ -268,15 +276,49 @@ onMounted(() => {
 
                         <div class="space-y-4">
                             <div>
-                                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Category</p>
+                                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Category 1</p>
                                 <div class="space-y-1">
                                     <button
-                                        v-for="facet in facets?.categories || []"
-                                        :key="`cat-${facet.id}`"
+                                        v-for="facet in facets?.category_tier_1 || []"
+                                        :key="`cat-1-${facet.id}`"
                                         type="button"
                                         class="flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-sm hover:bg-sky-50"
-                                        :class="normalizeCategoryValue(form.category) === normalizeCategoryValue(facet.id) ? 'bg-sky-100 text-sky-900' : 'text-slate-700'"
-                                        @click="setFacet('category', normalizeCategoryValue(form.category) === normalizeCategoryValue(facet.id) ? '' : facet.id)"
+                                        :class="String(form.category_1_id) === String(facet.id) ? 'bg-sky-100 text-sky-900' : 'text-slate-700'"
+                                        @click="setFacet('category_1_id', String(form.category_1_id) === String(facet.id) ? '' : String(facet.id))"
+                                    >
+                                        <span>{{ facet.name }}</span>
+                                        <span class="text-xs">{{ facet.total }}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Category 2</p>
+                                <div class="space-y-1">
+                                    <button
+                                        v-for="facet in facets?.category_tier_2 || []"
+                                        :key="`cat-2-${facet.id}`"
+                                        type="button"
+                                        class="flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-sm hover:bg-sky-50"
+                                        :class="String(form.category_2) === String(facet.id) ? 'bg-sky-100 text-sky-900' : 'text-slate-700'"
+                                        @click="setFacet('category_2', String(form.category_2) === String(facet.id) ? '' : String(facet.id)); form.category_2_id = ''"
+                                    >
+                                        <span>{{ facet.name }}</span>
+                                        <span class="text-xs">{{ facet.total }}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-600">Category 3</p>
+                                <div class="space-y-1">
+                                    <button
+                                        v-for="facet in facets?.category_tier_3 || []"
+                                        :key="`cat-3-${facet.id}`"
+                                        type="button"
+                                        class="flex w-full items-center justify-between rounded-lg px-2 py-1 text-left text-sm hover:bg-sky-50"
+                                        :class="String(form.category_3) === String(facet.id) ? 'bg-sky-100 text-sky-900' : 'text-slate-700'"
+                                        @click="setFacet('category_3', String(form.category_3) === String(facet.id) ? '' : String(facet.id)); form.category_3_id = ''"
                                     >
                                         <span>{{ facet.name }}</span>
                                         <span class="text-xs">{{ facet.total }}</span>
